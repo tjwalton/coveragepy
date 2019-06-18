@@ -11,6 +11,7 @@ import os
 import os.path
 import re
 import sys
+import textwrap
 
 import mock
 
@@ -19,7 +20,8 @@ from coverage.backward import unicode_class
 from coverage import env
 from coverage.files import flat_rootname
 import coverage.html
-from coverage.misc import CoverageException, NotPython, NoSource
+from coverage.misc import arcz_to_arcs, CoverageException, NotPython, NoSource
+from coverage.report import get_analysis_to_report
 
 from tests.coveragetest import CoverageTest, TESTS_DIR
 from tests.goldtest import gold_path
@@ -1033,3 +1035,83 @@ assert len(math) == 18
             '<span class="str">"db40,dd00: x&#56128;&#56576;"</span>',
             '<span class="str">"db40,dd00: x&#917760;"</span>',
         )
+
+
+class FakeData(object):
+    def __init__(self):
+        self._arcs = {}
+
+    def file_tracer(self, morf):
+        """Everything is Python."""
+        return ""
+
+    def has_arcs(self):
+        return True
+
+    def lines(self, fname):
+        return list(range(10))
+
+    def arcs(self, fname):
+        return self._arcs[fname]
+
+    def set_arcs(self, fname, arcs):
+        self._arcs[fname] = arcs
+
+
+def html_data_from_cov(cov, morf):
+    reporter = coverage.html.HtmlDataGeneration(cov)
+    for fr, analysis in get_analysis_to_report(cov, [morf]):
+        file_data = reporter.data_for_file(fr, analysis)
+        return file_data
+
+
+class InMemoryWorld(object):
+    def __init__(self):
+        self.files = {}
+        self.data = FakeData()
+
+    def __enter__(self):
+        self.patcher = mock.patch("coverage.python.fs_access", self)
+        self.patcher.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.patcher.__exit__(exc_type, exc_value, traceback)
+
+    def make_file(self, filename, text="", arcz=None, arcs=None):
+        filename = os.path.abspath(filename)
+        text = textwrap.dedent(text)
+        if env.PY3:
+            text = text.encode('utf-8')
+        self.files[filename] = text
+        if arcz:
+            arcs = arcz_to_arcs(arcz)
+        if arcs:
+            self.data.set_arcs(filename, arcs)
+
+    def coverage(self):
+        cov = coverage.Coverage()
+        cov._data = self.data
+        return cov
+
+    def file_exists(self, filename):
+        print("Looking for {!r}".format(filename))
+        return filename in self.files
+
+    def read_file(self, filename):
+        if filename in self.files:
+            return self.files[filename]
+        else:
+            raise IOError("No such fake file: {!r}".format(filename))
+
+
+class DataForFileTest(HtmlTestHelpers, CoverageTest):
+
+    run_in_temp_dir = False
+
+    def test_it(self):
+        with InMemoryWorld() as world:
+            world.make_file("foo.py", "a = 1", arcz=".1 1.")
+            d = html_data_from_cov(world.coverage(), "foo.py")
+        assert d.lines[0].category == 'run'
+        assert ''.join(text for _, text in d.lines[0].tokens) == 'a = 1'
