@@ -17,6 +17,21 @@ from coverage.plugin import FileReporter
 os = isolate_module(os)
 
 
+class FsAccess(object):
+    """A mockable abstraction for reading Python source."""
+    def file_exists(self, filename):
+        """Mockable os.path.exists."""
+        return os.path.exists(filename)
+
+    @contract(returns='bytes')
+    def read_file(self, filename):
+        """Mockable open/read."""
+        with open(filename, "rb") as f:
+            return f.read()
+
+fs_access = FsAccess()
+
+
 @contract(returns='bytes')
 def read_python_source(filename):
     """Read the Python source text from `filename`.
@@ -24,8 +39,7 @@ def read_python_source(filename):
     Returns bytes.
 
     """
-    with open(filename, "rb") as f:
-        source = f.read()
+    source = fs_access.read_file(filename)
 
     if env.IRONPYTHON:
         # IronPython reads Unicode strings even for "rb" files.
@@ -45,7 +59,7 @@ def get_python_source(filename):
 
     for ext in exts:
         try_filename = base + ext
-        if os.path.exists(try_filename):
+        if fs_access.file_exists(try_filename):
             # A regular text file: open it.
             source = read_python_source(try_filename)
             break
@@ -110,13 +124,13 @@ def source_for_file(filename):
     elif filename.endswith((".pyc", ".pyo")):
         # Bytecode files probably have source files near them.
         py_filename = filename[:-1]
-        if os.path.exists(py_filename):
+        if fs_access.file_exists(py_filename):
             # Found a .py file, use that.
             return py_filename
         if env.WINDOWS:
             # On Windows, it could be a .pyw file.
             pyw_filename = py_filename + "w"
-            if os.path.exists(pyw_filename):
+            if fs_access.file_exists(pyw_filename):
                 return pyw_filename
         # Didn't find source, but it's probably the .py file we want.
         return py_filename
