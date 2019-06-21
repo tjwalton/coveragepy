@@ -8,6 +8,7 @@ import functools
 import inspect
 import itertools
 import os
+import pprint
 import sys
 try:
     import _thread
@@ -191,6 +192,22 @@ class SimpleReprMixin(object):
             id=id(self),
             attrs=" ".join("{}={!r}".format(k, v) for k, v in show_attrs),
             )
+
+
+def simplify(v):
+    """Turn things which are nearly dict/list/etc into dict/list/etc."""
+    if isinstance(v, dict):
+        return {k:simplify(vv) for k, vv in v.items()}
+    elif isinstance(v, (list, tuple)):
+        return type(v)(simplify(vv) for vv in v)
+    elif hasattr(v, "__dict__"):
+        return simplify(v.__dict__)
+    else:
+        return v
+
+
+def pp(v):
+    pprint.pprint(simplify(v))
 
 
 def filter_text(text, filters):

@@ -6,6 +6,7 @@
 
 import datetime
 import glob
+import itertools
 import json
 import os
 import os.path
@@ -17,6 +18,7 @@ import mock
 
 import coverage
 from coverage.backward import unicode_class
+from coverage.debug import pp
 from coverage import env
 from coverage.files import flat_rootname
 import coverage.html
@@ -1049,7 +1051,9 @@ class FakeData(object):
         return True
 
     def lines(self, fname):
-        return list(range(10))
+        # TODO: move this someplace common instead of this third copy.
+        all_lines = itertools.chain.from_iterable(self.arcs(fname))
+        return list(set(l for l in all_lines if l > 0))
 
     def arcs(self, fname):
         return self._arcs[fname]
@@ -1058,11 +1062,18 @@ class FakeData(object):
         self._arcs[fname] = arcs
 
 
-def html_data_from_cov(cov, morf):
-    reporter = coverage.html.HtmlDataGeneration(cov)
-    for fr, analysis in get_analysis_to_report(cov, [morf]):
-        file_data = reporter.data_for_file(fr, analysis)
-        return file_data
+class FakeFsAccess(object):
+    def __init__(self, files):
+        self._files = files
+
+    def file_exists(self, filename):
+        return filename in self._files
+
+    def read_file(self, filename):
+        if filename in self._files:
+            return self._files[filename]
+        else:
+            raise IOError("No such fake file: {!r}".format(filename))
 
 
 class InMemoryWorld(object):
@@ -1071,7 +1082,7 @@ class InMemoryWorld(object):
         self.data = FakeData()
 
     def __enter__(self):
-        self.patcher = mock.patch("coverage.python.fs_access", self)
+        self.patcher = mock.patch("coverage.python.fs_access", FakeFsAccess(self.files))
         self.patcher.__enter__()
         return self
 
@@ -1094,15 +1105,12 @@ class InMemoryWorld(object):
         cov._data = self.data
         return cov
 
-    def file_exists(self, filename):
-        print("Looking for {!r}".format(filename))
-        return filename in self.files
 
-    def read_file(self, filename):
-        if filename in self.files:
-            return self.files[filename]
-        else:
-            raise IOError("No such fake file: {!r}".format(filename))
+def html_data_from_cov(cov, morf):
+    reporter = coverage.html.HtmlDataGeneration(cov)
+    for fr, analysis in get_analysis_to_report(cov, [morf]):
+        file_data = reporter.data_for_file(fr, analysis)
+        return file_data
 
 
 class DataForFileTest(HtmlTestHelpers, CoverageTest):
@@ -1113,5 +1121,6 @@ class DataForFileTest(HtmlTestHelpers, CoverageTest):
         with InMemoryWorld() as world:
             world.make_file("foo.py", "a = 1", arcz=".1 1.")
             d = html_data_from_cov(world.coverage(), "foo.py")
+        pp(d)
         assert d.lines[0].category == 'run'
         assert ''.join(text for _, text in d.lines[0].tokens) == 'a = 1'
