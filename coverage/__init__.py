@@ -6,6 +6,8 @@
 Ned Batchelder
 https://nedbatchelder.com/code/coverage
 
+
+PYTEST_DONT_REWRITE
 """
 
 import sys
