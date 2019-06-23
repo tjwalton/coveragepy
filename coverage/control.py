@@ -55,6 +55,8 @@ class Coverage(object):
 
     """
 
+    current = set()
+
     def __init__(
         self, data_file=None, data_suffix=None, cover_pylib=None,
         auto_data=False, timid=None, branch=None, config_file=True,
@@ -453,9 +455,14 @@ class Coverage(object):
 
         self._collector.start()
         self._started = True
+        self.current.add(self)
 
     def stop(self):
         """Stop measuring code coverage."""
+        try:
+            self.current.remove(self)
+        except KeyError:
+            pass
         if self._started:
             self._collector.stop()
         self._started = False
