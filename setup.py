@@ -76,7 +76,11 @@ setup_args = dict(
 
     packages=[
         'coverage',
+        'coverage_pytest_plugin',
     ],
+    package_dir={
+        'coverage_pytest_plugin': 'pytest_plugin',
+    },
 
     package_data={
         'coverage': [
@@ -94,7 +98,8 @@ setup_args = dict(
             'coverage-%d.%d = coverage.cmdline:main' % sys.version_info[:2],
         ],
         'pytest11': [
-            'coverage = coverage.pytest_plugin',
+            #'coverage = coverage.pytest_plugin',
+            'coverage = coverage_pytest_plugin.pytest_plugin',
         ],
     },
 
