@@ -196,48 +196,48 @@ class CoverageTest(
         del sys.modules[modname]
 
         # Get the analysis results, and check that they are right.
-        analysis = cov._analyze(mod)
-        statements = sorted(analysis.statements)
-        if lines is not None:
-            if isinstance(lines[0], int):
-                # lines is just a list of numbers, it must match the statements
-                # found in the code.
-                self.assertEqual(statements, lines)
-            else:
-                # lines is a list of possible line number lists, one of them
-                # must match.
-                for line_list in lines:
-                    if statements == line_list:
-                        break
+        with cov._analyze(mod) as analysis:
+            statements = sorted(analysis.statements)
+            if lines is not None:
+                if isinstance(lines[0], int):
+                    # lines is just a list of numbers, it must match the statements
+                    # found in the code.
+                    self.assertEqual(statements, lines)
                 else:
-                    self.fail("None of the lines choices matched %r" % statements)
+                    # lines is a list of possible line number lists, one of them
+                    # must match.
+                    for line_list in lines:
+                        if statements == line_list:
+                            break
+                    else:
+                        self.fail("None of the lines choices matched %r" % statements)
 
-            missing_formatted = analysis.missing_formatted()
-            if isinstance(missing, string_class):
-                self.assertEqual(missing_formatted, missing)
-            else:
-                for missing_list in missing:
-                    if missing_formatted == missing_list:
-                        break
+                missing_formatted = analysis.missing_formatted()
+                if isinstance(missing, string_class):
+                    self.assertEqual(missing_formatted, missing)
                 else:
-                    self.fail("None of the missing choices matched %r" % missing_formatted)
+                    for missing_list in missing:
+                        if missing_formatted == missing_list:
+                            break
+                    else:
+                        self.fail("None of the missing choices matched %r" % missing_formatted)
 
-        if arcs is not None:
-            with self.delayed_assertions():
-                self.assert_equal_arcs(
-                    arcs, analysis.arc_possibilities(),
-                    "Possible arcs differ: minus is expected, plus is actual"
-                )
+            if arcs is not None:
+                with self.delayed_assertions():
+                    self.assert_equal_arcs(
+                        arcs, analysis.arc_possibilities(),
+                        "Possible arcs differ: minus is expected, plus is actual"
+                    )
 
-                self.assert_equal_arcs(
-                    arcs_missing, analysis.arcs_missing(),
-                    "Missing arcs differ: minus is expected, plus is actual"
-                )
+                    self.assert_equal_arcs(
+                        arcs_missing, analysis.arcs_missing(),
+                        "Missing arcs differ: minus is expected, plus is actual"
+                    )
 
-                self.assert_equal_arcs(
-                    arcs_unpredicted, analysis.arcs_unpredicted(),
-                    "Unpredicted arcs differ: minus is expected, plus is actual"
-                )
+                    self.assert_equal_arcs(
+                        arcs_unpredicted, analysis.arcs_unpredicted(),
+                        "Unpredicted arcs differ: minus is expected, plus is actual"
+                    )
 
         if report:
             frep = StringIO()

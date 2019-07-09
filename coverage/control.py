@@ -683,14 +683,14 @@ class Coverage(object):
         coverage data.
 
         """
-        analysis = self._analyze(morf)
-        return (
-            analysis.filename,
-            sorted(analysis.statements),
-            sorted(analysis.excluded),
-            sorted(analysis.missing),
-            analysis.missing_formatted(),
-            )
+        with self._analyze(morf) as analysis:
+            return (
+                analysis.filename,
+                sorted(analysis.statements),
+                sorted(analysis.excluded),
+                sorted(analysis.missing),
+                analysis.missing_formatted(),
+                )
 
     def _analyze(self, it):
         """Analyze a single morf or code unit.

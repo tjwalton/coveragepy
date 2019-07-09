@@ -834,7 +834,8 @@ class AnalysisTest(CoverageTest):
         # Import the Python file, executing it.
         self.start_import_stop(cov, "missing")
 
-        nums = cov._analyze("missing.py").numbers
+        with cov._analyze("missing.py") as analysis:
+            nums = analysis.numbers
         self.assertEqual(nums.n_files, 1)
         self.assertEqual(nums.n_statements, 7)
         self.assertEqual(nums.n_excluded, 1)

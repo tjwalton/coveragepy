@@ -399,13 +399,12 @@ class GoodFileTracerTest(FileTracerTest):
         # The way plugin2 works, a file named foo_7.html will be claimed to
         # have 7 lines in it.  If render() was called with line number 4,
         # then the plugin will claim that lines 4 and 5 were executed.
-        analysis = cov._analyze("foo_7.html")
-        self.assertEqual(analysis.statements, set([1, 2, 3, 4, 5, 6, 7]))
-        # Plugins don't do branch coverage yet.
-        self.assertEqual(analysis.has_arcs(), True)
-        self.assertEqual(analysis.arc_possibilities(), [])
-
-        self.assertEqual(analysis.missing, set([1, 2, 3, 6, 7]))
+        with cov._analyze("foo_7.html") as analysis:
+            self.assertEqual(analysis.statements, set([1, 2, 3, 4, 5, 6, 7]))
+            # Plugins don't do branch coverage yet.
+            self.assertEqual(analysis.has_arcs(), True)
+            self.assertEqual(analysis.arc_possibilities(), [])
+            self.assertEqual(analysis.missing, set([1, 2, 3, 6, 7]))
 
     def test_plugin2_with_text_report(self):
         self.make_render_and_caller()

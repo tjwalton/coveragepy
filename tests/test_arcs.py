@@ -1315,7 +1315,8 @@ class MiscArcTest(CoverageTest):
         # ugh, unexposed methods??
         filename = self.last_module_name + ".py"
         fr = cov._get_file_reporter(filename)
-        arcs_executed = cov._analyze(filename).arcs_executed()
+        with cov._analyze(filename) as analysis:
+            arcs_executed = analysis.arcs_executed()
         self.assertEqual(
             fr.missing_arc_description(3, -3, arcs_executed),
             "line 3 didn't finish the generator expression on line 3"

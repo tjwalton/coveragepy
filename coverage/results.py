@@ -49,6 +49,12 @@ class Analysis(object):
             n_missing_branches=n_missing_branches,
         )
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.data.close()
+
     def missing_formatted(self, branches=False):
         """The missing line numbers, formatted nicely.
 
