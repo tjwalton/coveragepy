@@ -118,7 +118,7 @@ class CoverageSqliteData(SimpleReprMixin):
     def _reset(self):
         for db in self._dbs.values():
             db.close()
-        self._dbs = {}
+        self._dbs.clear()
         self._file_map = {}
         self._have_used = False
         self._current_context_id = None
@@ -525,8 +525,14 @@ class CoverageSqliteData(SimpleReprMixin):
 
     def write(self):
         """Write the collected coverage data to a file."""
+        pass
+
+    def close(self):
+        if self._debug.should('dataop'):
+            self._debug.write("Closing {!r}".format(self._filename))
         for db in self._dbs.values():
             db.close()
+        self._dbs.clear()
 
     def _start_using(self):
         if self._pid != os.getpid():
@@ -712,6 +718,8 @@ class SqliteDb(SimpleReprMixin):
 
     def close(self):
         if self.con is not None:
+            if self.debug:
+                self.debug.write("Closing connection")
             self.con.close()
             self.con = None
 

@@ -4,6 +4,7 @@
 """Core control stuff for coverage.py."""
 
 import atexit
+import contextlib
 import os
 import os.path
 import platform
@@ -479,6 +480,7 @@ class Coverage(object):
                 self._instances.pop()
         if self._started:
             self._collector.stop()
+            self._data.close()
         self._started = False
 
     def _atexit(self):
@@ -503,6 +505,7 @@ class Coverage(object):
             self._collector.reset()
         self._init_data(suffix=None)
         self._data.erase(parallel=self.config.parallel)
+        self._data.close()
         self._data = None
 
     def switch_context(self, new_context):
@@ -574,6 +577,7 @@ class Coverage(object):
         """Save the collected coverage data to the data file."""
         data = self.get_data()
         data.write()
+        data.close()
 
     def combine(self, data_paths=None, strict=False):
         """Combine together a number of similarly-named coverage data files.
@@ -611,6 +615,7 @@ class Coverage(object):
                     aliases.add(pattern, result)
 
         combine_parallel_data(self._data, aliases=aliases, data_paths=data_paths, strict=strict)
+        self._data.close()
 
     def get_data(self):
         """Get the collected data.
@@ -785,7 +790,8 @@ class Coverage(object):
             report_contexts=contexts,
             )
         reporter = SummaryReporter(self)
-        return reporter.report(morfs, outfile=file)
+        with contextlib.closing(self._data):
+            return reporter.report(morfs, outfile=file)
 
     def annotate(
         self, morfs=None, directory=None, ignore_errors=None,
@@ -806,7 +812,8 @@ class Coverage(object):
             report_include=include, report_contexts=contexts,
             )
         reporter = AnnotateReporter(self)
-        reporter.report(morfs, directory=directory)
+        with contextlib.closing(self._data):
+            reporter.report(morfs, directory=directory)
 
     def html_report(self, morfs=None, directory=None, ignore_errors=None,
                     omit=None, include=None, extra_css=None, title=None,
@@ -840,7 +847,8 @@ class Coverage(object):
             skip_covered=skip_covered, show_contexts=show_contexts, report_contexts=contexts,
             )
         reporter = HtmlReporter(self)
-        return reporter.report(morfs)
+        with contextlib.closing(self._data):
+            return reporter.report(morfs)
 
     def xml_report(
         self, morfs=None, outfile=None, ignore_errors=None,
@@ -880,7 +888,8 @@ class Coverage(object):
                 file_to_close = outfile
         try:
             reporter = XmlReporter(self)
-            return reporter.report(morfs, outfile=outfile)
+            with contextlib.closing(self._data):
+                return reporter.report(morfs, outfile=outfile)
         except CoverageException:
             delete_file = True
             raise
