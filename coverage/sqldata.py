@@ -20,7 +20,6 @@ import zlib
 
 from coverage.backward import get_thread_id, iitems, to_bytes, to_string
 from coverage.debug import NoDebugging, SimpleReprMixin
-from coverage import env
 from coverage.files import PathAliases
 from coverage.misc import CoverageException, file_be_gone, filename_suffix, isolate_module
 from coverage.misc import contract
@@ -99,24 +98,6 @@ CREATE TABLE tracer (
     foreign key (file_id) references file (id)
 );
 """
-
-if env.PY2:
-    def to_blob(b):
-        """Convert a bytestring into a type SQLite will accept for a blob."""
-        return buffer(b)        # pylint: disable=undefined-variable
-
-    def from_blob(blob):
-        """Convert a blob read from SQLite into a bytestring."""
-        return bytes(blob)
-else:
-    def to_blob(b):
-        """Convert a bytestring into a type SQLite will accept for a blob."""
-        return b
-
-    def from_blob(blob):
-        """Convert a blob read from SQLite into a bytestring."""
-        return blob
-
 
 class CoverageData(SimpleReprMixin):
     """Manages collected coverage data, including file storage.
@@ -389,12 +370,12 @@ class CoverageData(SimpleReprMixin):
                 query = "select numbits from line_map where file_id = ? and context_id = ?"
                 existing = list(con.execute(query, (file_id, self._current_context_id)))
                 if existing:
-                    linemap = merge_numbits(linemap, from_blob(existing[0][0]))
+                    linemap = merge_numbits(linemap, existing[0][0])
 
                 con.execute(
                     "insert or replace into line_map "
                     " (file_id, context_id, numbits) values (?, ?, ?)",
-                    (file_id, self._current_context_id, to_blob(linemap)),
+                    (file_id, self._current_context_id, linemap),
                 )
 
     def add_arcs(self, arc_data):
@@ -536,7 +517,7 @@ class CoverageData(SimpleReprMixin):
                 'inner join context on context.id = line_map.context_id'
                 )
             lines = {
-                (files[path], context): from_blob(numbits)
+                (files[path], context): numbits
                 for (path, context, numbits) in cur
                 }
             cur.close()
@@ -617,7 +598,6 @@ class CoverageData(SimpleReprMixin):
                 )
             for path, context, numbits in cur:
                 key = (aliases.map(path), context)
-                numbits = from_blob(numbits)
                 if key in lines:
                     numbits = merge_numbits(lines[key], numbits)
                 lines[key] = numbits
@@ -636,7 +616,7 @@ class CoverageData(SimpleReprMixin):
                 "insert into line_map "
                 "(file_id, context_id, numbits) values (?, ?, ?)",
                 [
-                    (file_ids[file], context_ids[context], to_blob(numbits))
+                    (file_ids[file], context_ids[context], numbits)
                     for (file, context), numbits in lines.items()
                 ]
             )
@@ -766,7 +746,7 @@ class CoverageData(SimpleReprMixin):
                 bitmaps = list(con.execute(query, data))
                 nums = set()
                 for row in bitmaps:
-                    nums.update(numbits_to_nums(from_blob(row[0])))
+                    nums.update(numbits_to_nums(row[0]))
                 return sorted(nums)
 
     def arcs(self, filename, contexts=None):
@@ -823,7 +803,7 @@ class CoverageData(SimpleReprMixin):
                     query += " and l.context_id in (" + ids_array + ")"
                     data += context_ids
                 for numbits, context in con.execute(query, data):
-                    for lineno in numbits_to_nums(from_blob(numbits)):
+                    for lineno in numbits_to_nums(numbits):
                         lineno_contexts_map[lineno].append(context)
         return lineno_contexts_map
 
