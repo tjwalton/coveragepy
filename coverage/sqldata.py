@@ -28,6 +28,9 @@ from coverage.version import __version__
 
 os = isolate_module(os)
 
+# If you change the schema, increment the SCHEMA_VERSION, and update the
+# docs in docs/dbschema.rst also.
+
 SCHEMA_VERSION = 6
 
 # Schema versions:
@@ -71,7 +74,8 @@ CREATE TABLE context (
 );
 
 CREATE TABLE line_map (
-    -- If recording lines, a row per context per line executed.
+    -- If recording lines, a row per context per file executed.
+    -- All of the line numbers for that file/context are in one numbits.
     file_id integer,            -- foreign key to `file`.
     context_id integer,         -- foreign key to `context`.
     numbits blob,               -- see the numbits functions in coverage.numbits
