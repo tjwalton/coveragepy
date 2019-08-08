@@ -114,7 +114,7 @@ uninstall:
 
 # Documentation
 
-SPHINXBUILD = sphinx-build
+SPHINXBUILD = tox -q -e doc --notest; .tox/doc/bin/sphinx-build
 SPHINXOPTS = -a -E doc
 WEBHOME = ~/web/stellated/
 WEBSAMPLE = $(WEBHOME)/files/sample_coverage_html
@@ -124,7 +124,7 @@ docreqs:
 	pip install -r doc/requirements.pip
 
 dochtml:
-	PYTHONPATH=$(CURDIR) $(SPHINXBUILD) -b html $(SPHINXOPTS) doc/_build/html
+	$(SPHINXBUILD) -b html $(SPHINXOPTS) doc/_build/html
 	@echo
 	@echo "Build finished. The HTML pages are in doc/_build/html."
 
